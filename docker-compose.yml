@@ -1,0 +1,948 @@
+#services:
+#  zookeeper:
+#    image: confluentinc/cp-zookeeper:7.6.0
+#    environment:
+#      ZOOKEEPER_CLIENT_PORT: 2181
+#    networks: [bookstore-net]
+#
+#  kafka:
+#    image: confluentinc/cp-kafka:7.6.0
+#    ports: ["9092:9092"]
+#    environment:
+#      KAFKA_BROKER_ID: 1
+#      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+#      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+#    depends_on: [zookeeper]
+#    networks: [bookstore-net]
+#
+#  redis:
+#    image: redis:7-alpine
+#    ports: ["6379:6379"]
+#    networks: [bookstore-net]
+#
+#  eureka:
+#    build: ./eureka-server
+#    ports: ["8761:8761"]
+#    environment:
+#      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Kolkata"
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  config-server:
+#    build: ./config-server
+#    ports: ["8888:8888"]
+#    depends_on: [eureka]
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Kolkata"
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  api-gateway:
+#    build: ./api-gateway
+#    ports: ["8080:8080"]
+#    depends_on: [eureka, config-server]
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#      JWT_SECRET: ${JWT_SECRET}
+#      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Kolkata"
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  # ---------------- USER ----------------
+#  user-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: user_db
+#      POSTGRES_USER: ${DB_USER}
+#      POSTGRES_PASSWORD: ${DB_PASS}
+#    healthcheck:
+#      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d postgres" ]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
+#    networks: [bookstore-net]
+#
+#  user-service:
+#    build: ./user-service
+#    ports: ["8081:8081"]
+#    depends_on:
+#      user-db:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      DB_URL: jdbc:postgresql://user-db:5432/user_db
+#      DB_USER: ${DB_USER}
+#      DB_PASS: ${DB_PASS}
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#      JWT_SECRET: ${JWT_SECRET}
+#      JWT_EXPIRY: ${JWT_EXPIRY}
+#      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Kolkata"
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  # ---------------- ADMIN ----------------
+#  admin-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: admin_db
+#      POSTGRES_USER: ${DB_USER}
+#      POSTGRES_PASSWORD: ${DB_PASS}
+#    healthcheck:
+#      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d postgres" ]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
+#    networks: [bookstore-net]
+#
+#  admin-service:
+#    build: ./admin-service
+#    ports: ["8082:8082"]
+#    depends_on:
+#      admin-db:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      DB_URL: jdbc:postgresql://admin-db:5432/admin_db
+#      DB_USER: ${DB_USER}
+#      DB_PASS: ${DB_PASS}
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Kolkata"
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  # ---------------- PRODUCT ----------------
+#  product-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: product_db
+#      POSTGRES_USER: ${DB_USER}
+#      POSTGRES_PASSWORD: ${DB_PASS}
+#    healthcheck:
+#      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d postgres" ]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
+#    networks: [bookstore-net]
+#
+#  product-service:
+#    build: ./product-service
+#    ports: ["8083:8083"]
+#    depends_on:
+#      product-db:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      DB_URL: jdbc:postgresql://product-db:5432/product_db
+#      DB_USER: ${DB_USER}
+#      DB_PASS: ${DB_PASS}
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Kolkata"
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  # ---------------- CART ----------------
+#  cart-service:
+#    build: ./cart-service
+#    ports: ["8084:8084"]
+#    depends_on: [redis, eureka, config-server]
+#    environment:
+#      REDIS_HOST: redis
+#      REDIS_PORT: 6379
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Kolkata"
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  # ---------------- WISHLIST ----------------
+#  wishlist-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: wishlist_db
+#      POSTGRES_USER: ${DB_USER}
+#      POSTGRES_PASSWORD: ${DB_PASS}
+#    healthcheck:
+#      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d postgres" ]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
+#    networks: [bookstore-net]
+#
+#  wishlist-service:
+#    build: ./wishlist-service
+#    ports: ["8085:8085"]
+#    depends_on:
+#      wishlist-db:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      DB_URL: jdbc:postgresql://wishlist-db:5432/wishlist_db
+#      DB_USER: ${DB_USER}
+#      DB_PASS: ${DB_PASS}
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Kolkata"
+#    restart: always
+#    networks: [bookstore-net]
+#
+#networks:
+#  bookstore-net:
+#    driver: bridge
+
+#services:
+#
+#  zookeeper:
+#    image: confluentinc/cp-zookeeper:7.6.0
+#    environment:
+#      ZOOKEEPER_CLIENT_PORT: 2181
+#    networks: [bookstore-net]
+#
+#  kafka:
+#    image: confluentinc/cp-kafka:7.6.0
+#    ports: ["9092:9092"]
+#    environment:
+#      KAFKA_BROKER_ID: 1
+#      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+#    depends_on: [zookeeper]
+#    networks: [bookstore-net]
+#
+#  redis:
+#    image: redis:7-alpine
+#    ports: ["6379:6379"]
+#    networks: [bookstore-net]
+#
+#  eureka:
+#    build: ./eureka-server
+#    ports: ["8761:8761"]
+#    networks: [bookstore-net]
+#
+#  config-server:
+#    build: ./config-server
+#    ports: ["8888:8888"]
+#    depends_on: [eureka]
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#    networks: [bookstore-net]
+#
+#  api-gateway:
+#    build: ./api-gateway
+#    ports: ["8080:8080"]
+#    depends_on: [eureka, config-server]
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#      JWT_SECRET: bookstore-super-secret-key-2024-must-be-at-least-256-bits
+#    networks: [bookstore-net]
+#
+#  # ================= DATABASES =================
+#
+#  user-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: user_db
+#      POSTGRES_USER: admin
+#      POSTGRES_PASSWORD: secret
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
+#    networks: [bookstore-net]
+#
+#  admin-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: admin_db
+#      POSTGRES_USER: admin
+#      POSTGRES_PASSWORD: secret
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+#    networks: [bookstore-net]
+#
+#  product-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: product_db
+#      POSTGRES_USER: admin
+#      POSTGRES_PASSWORD: secret
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+#    networks: [bookstore-net]
+#
+#  wishlist-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: wishlist_db
+#      POSTGRES_USER: admin
+#      POSTGRES_PASSWORD: secret
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+#    networks: [bookstore-net]
+#
+#  customer-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: customer_db
+#      POSTGRES_USER: admin
+#      POSTGRES_PASSWORD: secret
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+#    networks: [bookstore-net]
+#
+#  order-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: order_db
+#      POSTGRES_USER: admin
+#      POSTGRES_PASSWORD: secret
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+#    networks: [bookstore-net]
+#
+#  feedback-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: feedback_db
+#      POSTGRES_USER: admin
+#      POSTGRES_PASSWORD: secret
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+#    networks: [bookstore-net]
+#
+#  # ================= SERVICES =================
+#
+#  user-service:
+#    build: ./user-service
+#    ports: ["8081:8081"]
+#    depends_on:
+#      user-db:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#      JWT_SECRET: bookstore-super-secret-key-2024-must-be-at-least-256-bits
+#      JWT_EXPIRY: 86400000
+#    networks: [bookstore-net]
+#
+#  admin-service:
+#    build: ./admin-service
+#    ports: ["8082:8082"]
+#    depends_on: [admin-db, eureka, config-server]
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#    networks: [bookstore-net]
+#
+#  product-service:
+#    build: ./product-service
+#    ports: ["8083:8083"]
+#    depends_on: [product-db, eureka, config-server]
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#    networks: [bookstore-net]
+#
+#  cart-service:
+#    build: ./cart-service
+#    ports: ["8084:8084"]
+#    depends_on: [redis, eureka, config-server]
+#    environment:
+#      REDIS_HOST: redis
+#      REDIS_PORT: 6379
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#    networks: [bookstore-net]
+#
+#  wishlist-service:
+#    build: ./wishlist-service
+#    ports: ["8085:8085"]
+#    depends_on: [wishlist-db, eureka, config-server]
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#    networks: [bookstore-net]
+#
+#  customer-details-service:
+#    build: ./customer-details-service
+#    ports: ["8086:8086"]
+#    depends_on: [customer-db, eureka, config-server]
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#    networks: [bookstore-net]
+#
+#  order-service:
+#    build: ./order-service
+#    ports: ["8087:8087"]
+#    depends_on: [order-db, kafka, eureka, config-server]
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#      KAFKA_SERVERS: kafka:9092
+#    networks: [bookstore-net]
+#
+#  feedback-service:
+#    build: ./feedback-service
+#    ports: ["8088:8088"]
+#    depends_on: [feedback-db, eureka, config-server]
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#    networks: [bookstore-net]
+#
+#  notification-service:
+#    build: ./notification-service
+#    ports: ["8089:8089"]
+#    depends_on: [kafka, eureka, config-server]
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#      KAFKA_SERVERS: kafka:9092
+#      MAIL_HOST: smtp.gmail.com
+#      MAIL_PORT: 587
+#      MAIL_USER: your-email@gmail.com
+#      MAIL_PASS: your-app-password
+#    networks: [bookstore-net]
+#
+#networks:
+#  bookstore-net:
+#    driver: bridge
+
+#services:
+#
+#  zookeeper:
+#    image: confluentinc/cp-zookeeper:7.6.0
+#    environment:
+#      ZOOKEEPER_CLIENT_PORT: 2181
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  kafka:
+#    image: confluentinc/cp-kafka:7.6.0
+#    ports: ["9092:9092"]
+#    environment:
+#      KAFKA_BROKER_ID: 1
+#      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+#    depends_on: [zookeeper]
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  redis:
+#    image: redis:7-alpine
+#    ports: ["6379:6379"]
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  eureka:
+#    build: ./eureka-server
+#    ports: ["8761:8761"]
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  config-server:
+#    build: ./config-server
+#    ports: ["8888:8888"]
+#    depends_on:
+#      eureka:
+#        condition: service_started
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  api-gateway:
+#    build: ./api-gateway
+#    ports: ["8080:8080"]
+#    depends_on:
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#      JWT_SECRET: bookstore-super-secret-key-2024-must-be-at-least-256-bits
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  # ================= DATABASES =================
+#
+#  user-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: user_db
+#      POSTGRES_USER: admin
+#      POSTGRES_PASSWORD: secret
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  admin-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: admin_db
+#      POSTGRES_USER: admin
+#      POSTGRES_PASSWORD: secret
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  product-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: product_db
+#      POSTGRES_USER: admin
+#      POSTGRES_PASSWORD: secret
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  wishlist-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: wishlist_db
+#      POSTGRES_USER: admin
+#      POSTGRES_PASSWORD: secret
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  customer-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: customer_db
+#      POSTGRES_USER: admin
+#      POSTGRES_PASSWORD: secret
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  order-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: order_db
+#      POSTGRES_USER: admin
+#      POSTGRES_PASSWORD: secret
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  feedback-db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: feedback_db
+#      POSTGRES_USER: admin
+#      POSTGRES_PASSWORD: secret
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 5
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  # ================= SERVICES =================
+#
+#  user-service:
+#    build: ./user-service
+#    ports: ["8081:8081"]
+#    depends_on:
+#      user-db:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#      JWT_SECRET: bookstore-super-secret-key-2024-must-be-at-least-256-bits
+#      JWT_EXPIRY: 86400000
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  admin-service:
+#    build: ./admin-service
+#    ports: ["8082:8082"]
+#    depends_on:
+#      admin-db:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  product-service:
+#    build: ./product-service
+#    ports: ["8083:8083"]
+#    depends_on:
+#      product-db:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  cart-service:
+#    build: ./cart-service
+#    ports: ["8084:8084"]
+#    depends_on:
+#      redis:
+#        condition: service_started
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      REDIS_HOST: redis
+#      REDIS_PORT: 6379
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  wishlist-service:
+#    build: ./wishlist-service
+#    ports: ["8085:8085"]
+#    depends_on:
+#      wishlist-db:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  customer-details-service:
+#    build: ./customer-details-service
+#    ports: ["8086:8086"]
+#    depends_on:
+#      customer-db:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  order-service:
+#    build: ./order-service
+#    ports: ["8087:8087"]
+#    depends_on:
+#      order-db:
+#        condition: service_healthy
+#      kafka:
+#        condition: service_started
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#      KAFKA_SERVERS: kafka:9092
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  feedback-service:
+#    build: ./feedback-service
+#    ports: ["8088:8088"]
+#    depends_on:
+#      feedback-db:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#    restart: always
+#    networks: [bookstore-net]
+#
+#  notification-service:
+#    build: ./notification-service
+#    ports: ["8089:8089"]
+#    depends_on:
+#      kafka:
+#        condition: service_started
+#      eureka:
+#        condition: service_started
+#      config-server:
+#        condition: service_started
+#    environment:
+#      EUREKA_URL: http://eureka:8761/eureka/
+#      CONFIG_URL: http://config-server:8888
+#      KAFKA_SERVERS: kafka:9092
+#      MAIL_HOST: smtp.gmail.com
+#      MAIL_PORT: 587
+#      MAIL_USER: your-email@gmail.com
+#      MAIL_PASS: your-app-password
+#    restart: always
+#    networks: [bookstore-net]
+#
+#networks:
+#  bookstore-net:
+#    driver: bridge
+
+version: "3.9"
+
+services:
+
+  # ---------------- INFRA ---------------- #
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - bookstore-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    depends_on:
+      zookeeper:
+        condition: service_started
+
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+    healthcheck:
+      test: [ "CMD", "bash", "-c", "nc -z localhost 9092" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    ports:
+      - "9092:9092"
+    networks:
+      - bookstore-net
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - bookstore-net
+
+  # ---------------- DATABASES ---------------- #
+
+  user-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d user_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookstore-net
+
+  product-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: product_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d product_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookstore-net
+
+  order-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: order_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d order_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookstore-net
+
+  # ---------------- CORE ---------------- #
+
+  eureka:
+    build: ./eureka-server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "8761:8761"
+    networks:
+      - bookstore-net
+
+  config-server:
+    build: ./config-server
+    depends_on:
+      eureka:
+        condition: service_healthy
+    environment:
+      EUREKA_URL: http://eureka:8761/eureka/
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "8888:8888"
+    networks:
+      - bookstore-net
+
+  # ---------------- SERVICES ---------------- #
+
+  user-service:
+    build: ./user-service
+    depends_on:
+      user-db:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    environment:
+      CONFIG_URL: http://config-server:8888
+      EUREKA_URL: http://eureka:8761/eureka/
+      JWT_SECRET: bookstore-super-secret-key-2024-must-be-at-least-256-bits
+    ports:
+      - "8081:8081"
+    networks:
+      - bookstore-net
+
+  product-service:
+    build: ./product-service
+    depends_on:
+      product-db:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    environment:
+      CONFIG_URL: http://config-server:8888
+      EUREKA_URL: http://eureka:8761/eureka/
+    ports:
+      - "8083:8083"
+    networks:
+      - bookstore-net
+
+  order-service:
+    build: ./order-service
+    depends_on:
+      order-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    environment:
+      CONFIG_URL: http://config-server:8888
+      EUREKA_URL: http://eureka:8761/eureka/
+      KAFKA_SERVERS: kafka:9092
+    ports:
+      - "8087:8087"
+    networks:
+      - bookstore-net
+
+  api-gateway:
+    build: ./api-gateway
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    environment:
+      CONFIG_URL: http://config-server:8888
+      EUREKA_URL: http://eureka:8761/eureka/
+    ports:
+      - "8080:8080"
+    networks:
+      - bookstore-net
+
+networks:
+  bookstore-net:
+    driver: bridge
